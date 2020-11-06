@@ -264,6 +264,8 @@ class PrimitiveOp(OperatorBase):
         """ Returns a ``CircuitOp`` equivalent to this Operator. """
         # pylint: disable=import-outside-toplevel
         from .circuit_op import CircuitOp
+        if self.coeff == 0:
+            return CircuitOp(QuantumCircuit(self.num_qubits), coeff=0)
         return CircuitOp(self.to_circuit(), coeff=self.coeff)
 
     # TODO change the PauliOp to depend on SparsePauliOp as its primitive

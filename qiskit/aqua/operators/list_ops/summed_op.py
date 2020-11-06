@@ -127,6 +127,10 @@ class SummedOp(ListOp):
         if isinstance(reduced_ops, SummedOp):
             reduced_ops = reduced_ops.collapse_summands()
 
+        from ..primitive_ops.summed_pauli_op import SummedPauliOp
+        if isinstance(reduced_ops, SummedPauliOp):
+            reduced_ops = reduced_ops.simplify()
+
         if isinstance(reduced_ops, SummedOp) and len(reduced_ops.oplist) == 1:
             return reduced_ops.oplist[0]
         else:
