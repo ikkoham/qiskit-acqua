@@ -40,7 +40,7 @@ class TestWeightedPauliOperator(QiskitAquaTestCase):
 
         self.num_qubits = 3
         paulis = [
-            Pauli("".join(pauli_label))
+            Pauli(label="".join(pauli_label))
             for pauli_label in itertools.product("IXYZ", repeat=self.num_qubits)
         ]
         weights = aqua_globals.random.random(len(paulis))
@@ -77,8 +77,8 @@ class TestWeightedPauliOperator(QiskitAquaTestCase):
         circuits = self.qubit_op.construct_evaluation_circuit(
             wave_function=wave_function, statevector_mode=True
         )
-        for circuit in circuits:
-            print(circuit)
+        for i in circuits:
+            print(i.global_phase)
         reference = self.qubit_op.evaluate_with_result(
             result=quantum_instance_statevector.execute(circuits), statevector_mode=True
         )

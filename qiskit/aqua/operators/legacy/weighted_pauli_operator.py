@@ -735,15 +735,12 @@ class WeightedPauliOperator(LegacyBaseOperator):
         elif statevector_mode:
             for _, pauli in self._paulis:
                 tmp_qc = qc.copy(name="Pauli " + pauli.to_label())
-                print(pauli.to_label())
                 if np.all(np.logical_not(pauli.z)) and np.all(np.logical_not(pauli.x)):  # all I
                     continue
                 # This explicit barrier is needed for statevector simulator since Qiskit-terra
                 # will remove global phase at default compilation level but the results here
                 # rely on global phase.
-                tmp_qc.barrier(list(range(self.num_qubits)))
                 tmp_qc.append(pauli.to_instruction(), list(range(self.num_qubits)))
-                print(pauli.to_instruction())
                 instructions[pauli.to_label()] = tmp_qc.to_instruction()
         else:
             cr = ClassicalRegister(self.num_qubits)
@@ -797,10 +794,12 @@ class WeightedPauliOperator(LegacyBaseOperator):
                 # all I
                 if np.all(np.logical_not(pauli.z)) and np.all(np.logical_not(pauli.x)):
                     avg += weight
+                    print(avg)
                 else:
                     quantum_state_i = \
                         result.get_statevector(circuit_name_prefix + pauli.to_label())
                     avg += (weight * (np.vdot(quantum_state, quantum_state_i)))
+                    print(avg)
         else:
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug("Computing the expectation from measurement results:")
