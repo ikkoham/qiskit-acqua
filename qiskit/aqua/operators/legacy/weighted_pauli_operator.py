@@ -789,18 +789,21 @@ class WeightedPauliOperator(LegacyBaseOperator):
                 # which must be converted to a complex value.
                 avg = avg[0] + 1j * avg[1]
         elif statevector_mode:
+            print('statevector_mode')
             quantum_state = np.asarray(result.get_statevector(circuit_name_prefix + 'psi'))
             for weight, pauli in self._paulis:
                 # all I
                 if np.all(np.logical_not(pauli.z)) and np.all(np.logical_not(pauli.x)):
                     avg += weight
-                    print(avg)
+                    print('all I')
+                    print(pauli.to_label(), avg)
                 else:
                     quantum_state_i = \
                         result.get_statevector(circuit_name_prefix + pauli.to_label())
                     avg += (weight * (np.vdot(quantum_state, quantum_state_i)))
-                    print(avg)
+                    print(pauli.to_label(), avg)
         else:
+            print('else')
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug("Computing the expectation from measurement results:")
                 TextProgressBar(sys.stderr)
