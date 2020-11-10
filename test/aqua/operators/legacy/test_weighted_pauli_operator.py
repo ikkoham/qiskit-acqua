@@ -39,22 +39,10 @@ class TestWeightedPauliOperator(QiskitAquaTestCase):
         aqua_globals.random_seed = seed
 
         self.num_qubits = 3
-        paulis = [
-            Pauli(label="".join(pauli_label))
-            for pauli_label in itertools.product("IXYZ", repeat=self.num_qubits)
-        ]
+        paulis = [Pauli(label="IIZ")]
         weights = aqua_globals.random.random(len(paulis))
         self.qubit_op = WeightedPauliOperator.from_list(paulis, weights)
         self.var_form = EfficientSU2(self.qubit_op.num_qubits, reps=1)
-
-        qasm_simulator = BasicAer.get_backend("qasm_simulator")
-        self.quantum_instance_qasm = QuantumInstance(
-            qasm_simulator, shots=65536, seed_simulator=seed, seed_transpiler=seed
-        )
-        statevector_simulator = BasicAer.get_backend("statevector_simulator")
-        self.quantum_instance_statevector = QuantumInstance(
-            statevector_simulator, shots=1, seed_simulator=seed, seed_transpiler=seed
-        )
 
     def test_evaluate_with_aer_mode(self):
         """ evaluate with aer mode test """
@@ -67,8 +55,11 @@ class TestWeightedPauliOperator(QiskitAquaTestCase):
             )
             return
 
+        seed = 3
         statevector_simulator = Aer.get_backend("statevector_simulator")
-        quantum_instance_statevector = QuantumInstance(statevector_simulator, shots=1)
+        quantum_instance_statevector = QuantumInstance(
+            statevector_simulator, shots=1, seed_simulator=seed, seed_transpiler=seed
+        )
 
         wave_function = self.var_form.assign_parameters(
             np.array(aqua_globals.random.standard_normal(self.var_form.num_parameters))
