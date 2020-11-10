@@ -39,7 +39,13 @@ class TestWeightedPauliOperator(QiskitAquaTestCase):
         aqua_globals.random_seed = seed
 
         self.num_qubits = 3
-        paulis = [Pauli(label="IIZ")]
+        paulis = [
+                Pauli(label="III"),
+                Pauli(label="IIX"),
+                Pauli(label="IIY"),
+                Pauli(label="IIZ"),
+                Pauli(label="IXI")
+                ]
         weights = aqua_globals.random.random(len(paulis))
         self.qubit_op = WeightedPauliOperator.from_list(paulis, weights)
         self.var_form = EfficientSU2(self.qubit_op.num_qubits, reps=1)
