@@ -40,10 +40,10 @@ class TestWeightedPauliOperator(QiskitAquaTestCase):
 
         self.num_qubits = 3
         paulis = [
+                Pauli(label="IIZ"),
+                Pauli(label="IIY"),
                 Pauli(label="III"),
                 Pauli(label="IIX"),
-                Pauli(label="IIY"),
-                Pauli(label="IIZ"),
                 Pauli(label="IXI")
                 ]
         weights = aqua_globals.random.random(len(paulis))
