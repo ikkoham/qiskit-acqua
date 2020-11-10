@@ -42,9 +42,7 @@ class TestWeightedPauliOperator(QiskitAquaTestCase):
         paulis = [
                 Pauli(label="IIZ"),
                 Pauli(label="IIY"),
-                Pauli(label="III"),
                 Pauli(label="IIX"),
-                Pauli(label="IXI")
                 ]
         weights = aqua_globals.random.random(len(paulis))
         self.qubit_op = WeightedPauliOperator.from_list(paulis, weights)
@@ -74,6 +72,8 @@ class TestWeightedPauliOperator(QiskitAquaTestCase):
         circuits = self.qubit_op.construct_evaluation_circuit(
             wave_function=wave_function, statevector_mode=True
         )
+        for c in circuits:
+            print(c.qasm())
         reference = self.qubit_op.evaluate_with_result(
             result=quantum_instance_statevector.execute(circuits), statevector_mode=True
         )
