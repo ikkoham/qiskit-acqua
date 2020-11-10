@@ -77,7 +77,8 @@ class TestWeightedPauliOperator(QiskitAquaTestCase):
         circuits = self.qubit_op.construct_evaluation_circuit(
             wave_function=wave_function, statevector_mode=True
         )
-        print(circuits)
+        for circuit in circuits:
+            print(circuit)
         reference = self.qubit_op.evaluate_with_result(
             result=quantum_instance_statevector.execute(circuits), statevector_mode=True
         )
@@ -87,7 +88,6 @@ class TestWeightedPauliOperator(QiskitAquaTestCase):
             statevector_mode=True,
             use_simulator_snapshot_mode=True,
         )
-        print(circuits)
         actual_value = self.qubit_op.evaluate_with_result(
             result=quantum_instance_statevector.execute(circuits),
             statevector_mode=True,

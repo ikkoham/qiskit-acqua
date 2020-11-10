@@ -735,6 +735,7 @@ class WeightedPauliOperator(LegacyBaseOperator):
         elif statevector_mode:
             for _, pauli in self._paulis:
                 tmp_qc = qc.copy(name="Pauli " + pauli.to_label())
+                print(pauli.to_label())
                 if np.all(np.logical_not(pauli.z)) and np.all(np.logical_not(pauli.x)):  # all I
                     continue
                 # This explicit barrier is needed for statevector simulator since Qiskit-terra
@@ -742,6 +743,7 @@ class WeightedPauliOperator(LegacyBaseOperator):
                 # rely on global phase.
                 tmp_qc.barrier(list(range(self.num_qubits)))
                 tmp_qc.append(pauli.to_instruction(), list(range(self.num_qubits)))
+                print(pauli.to_instruction())
                 instructions[pauli.to_label()] = tmp_qc.to_instruction()
         else:
             cr = ClassicalRegister(self.num_qubits)
