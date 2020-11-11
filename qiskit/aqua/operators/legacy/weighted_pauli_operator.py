@@ -790,7 +790,7 @@ class WeightedPauliOperator(LegacyBaseOperator):
                 avg = avg[0] + 1j * avg[1]
         elif statevector_mode:
             print('statevector_mode')
-            quantum_state = np.asarray(result.get_statevector(circuit_name_prefix + 'psi'))
+            quantum_state = np.array(result.get_statevector(circuit_name_prefix + 'psi'))
             for weight, pauli in self._paulis:
                 # all I
                 if np.all(np.logical_not(pauli.z)) and np.all(np.logical_not(pauli.x)):
