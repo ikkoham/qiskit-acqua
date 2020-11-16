@@ -1,0 +1,1274 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%load_ext autoreload\n",
+    "%autoreload 2"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# SummedPauliOp as new PrimitiveOp"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Summary\n",
+    "\n",
+    "`SummedPauliOp` is a wrapper class of `SparasePauliOp` in Terra's quantum_info.\n",
+    "This calss is functionally equivalent with `SummedOp` of `PauliOp` now, but the operations are fast.\n",
+    "\n",
+    "This notebook is based on Qiskit Tutorials (now in [PR](https://github.com/Qiskit/qiskit-tutorials/pull/1068))\n",
+    "\n",
+    "Link to \n",
+    "- [this notebook](https://nbviewer.jupyter.org/github/ikkoham/qiskit-aqua/blob/sparsepauliop/qiskit/aqua/operators/primitive_ops/SummedPauliOp.ipynb).\n",
+    "- [Branch](https://github.com/ikkoham/qiskit-aqua/tree/sparsepauliop)\n",
+    "- [Diff](https://github.com/Qiskit/qiskit-aqua/compare/master...ikkoham:sparsepauliop)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Progress and TODO\n",
+    "We have\n",
+    "- Implemented SummedPauliOp\n",
+    "- Supported PauliExpectation and Trotter.\n",
+    "\n",
+    "However, we did not optimize the flow for `SparsePauliOp`.\n",
+    "We will improve\n",
+    "- TensoredOp\n",
+    "- AbelianGrouper, CircuitSampler, AerPauliExpectation\n",
+    "- EvolvedOp\n",
+    "\n",
+    "We can support for `SummedPauliOp`\n",
+    "- Z2 Symmetry\n",
+    "\n",
+    "TODO:\n",
+    "\n",
+    "- Add Unittest\n",
+    "\n",
+    "Commutator"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from qiskit.quantum_info import Pauli, SparsePauliOp\n",
+    "from qiskit.aqua.operators import PauliOp, SummedOp, SummedPauliOp, Zero\n",
+    "import numpy as np"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "SparsePauliOp([[False,  True,  True,  True,  True, False]],\n",
+      "              coeffs=[2.+0.j])\n"
+     ]
+    }
+   ],
+   "source": [
+    "xyz = SparsePauliOp(Pauli.from_label('XYZ'), coeffs=[2])\n",
+    "print(xyz)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "SparsePauliOp([[False,  True,  True,  True, False, False]],\n",
+      "              coeffs=[3.+0.j])\n"
+     ]
+    }
+   ],
+   "source": [
+    "xxz = SparsePauliOp(Pauli.from_label('XXZ'), coeffs=[3])\n",
+    "print(xxz)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Methods of SummedPauliOp\n",
+    "\n",
+    "New `SummedPauliOp` supports methods which `PrimitiveOp` must have."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## SummedPauliOp, sums, compositions, and tensor products\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "SummedPauliOp([\n",
+      "2.0 * XYZ,\n",
+      "3.0 * XXZ,\n",
+      "])\n"
+     ]
+    }
+   ],
+   "source": [
+    "# sum\n",
+    "print(SummedPauliOp(xyz) + SummedPauliOp(xxz))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "SummedPauliOp([\n",
+      "-6j * IZI,\n",
+      "])\n"
+     ]
+    }
+   ],
+   "source": [
+    "# matrix product\n",
+    "print(SummedPauliOp(xyz) @ SummedPauliOp(xxz))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "SummedPauliOp([\n",
+      "6.0 * XYZXXZ,\n",
+      "])\n"
+     ]
+    }
+   ],
+   "source": [
+    "# tensor product\n",
+    "print(SummedPauliOp(xyz) ^ SummedPauliOp(xxz))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from qiskit.aqua.operators import I, X, Y, Z"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "SummedPauliOp([\n",
+      "1.0 * X,\n",
+      "2.0 * Y,\n",
+      "])\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(X + 2*Y)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "It used to be `SummedOp` of `PauliOp`, but now it will be changed to `SummedPauliOp`."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "SummedPauliOp(SparsePauliOp([[ True, False],\n",
+       "               [ True,  True]],\n",
+       "              coeffs=[1.+0.j, 2.+0.j]), coeff=1)"
+      ]
+     },
+     "execution_count": 10,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "X + 2*Y"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "SummedPauliOp([\n",
+      "1.0 * II,\n",
+      "-1.0 * IZ,\n",
+      "-1.0 * ZI,\n",
+      "1.0 * ZZ,\n",
+      "1.0 * XX,\n",
+      "1.0 * XY,\n",
+      "-1.0 * YX,\n",
+      "-1.0 * YY,\n",
+      "])\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(((I-Z)^(I-Z)) + ((X-Y)^(X+Y)))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Constructor"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "SummedPauliOp(SparsePauliOp([[False,  True,  True,  True,  True, False]],\n",
+       "              coeffs=[2.+0.j]), coeff=1.0)"
+      ]
+     },
+     "execution_count": 12,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "SummedPauliOp(SparsePauliOp(Pauli(label='XYZ'), coeffs=[2]))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Eval"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "DictStateFn({'011': (2+3j)}, coeff=1.0, is_measurement=False)"
+      ]
+     },
+     "execution_count": 13,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "SummedPauliOp(xyz+xxz).eval('000')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "DictStateFn({'011': (2+3j)}, coeff=1.0, is_measurement=False)"
+      ]
+     },
+     "execution_count": 14,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "(SummedPauliOp(xyz+xxz) @ (Zero^3)).eval()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "DictStateFn({'011': (2+3j)}, coeff=1.0, is_measurement=False)"
+      ]
+     },
+     "execution_count": 15,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "SummedPauliOp(xyz+xxz).eval(Zero^3)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### exp_i()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "EvolvedOp(SummedOp(PauliOp(Pauli(z=[True, True, False], x=[False, True, True]), coeff=2.0), coeff=1.0, abelian=False), coeff=1.0)"
+      ]
+     },
+     "execution_count": 16,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "SummedOp(2*PauliOp(Pauli.from_label('XYZ'))).exp_i()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "EvolvedOp(SummedPauliOp(SparsePauliOp([[False,  True,  True,  True,  True, False]],\n",
+       "              coeffs=[2.+0.j]), coeff=1.0), coeff=1.0)"
+      ]
+     },
+     "execution_count": 17,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "SummedPauliOp(xyz).exp_i()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### to_pauli_op()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "SummedOp([PauliOp(Pauli(z=[True, True, False], x=[False, True, True]), coeff=2.0), PauliOp(Pauli(z=[True, False, False], x=[False, True, True]), coeff=3.0)], coeff=1.0, abelian=False)"
+      ]
+     },
+     "execution_count": 18,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "SummedPauliOp(xyz+xxz).to_pauli_op()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### to_matrix()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([[0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.-2.j, 0.+0.j],\n",
+       "       [0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+2.j],\n",
+       "       [0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+2.j, 0.+0.j, 0.+0.j, 0.+0.j],\n",
+       "       [0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.-2.j, 0.+0.j, 0.+0.j],\n",
+       "       [0.+0.j, 0.+0.j, 0.-2.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j],\n",
+       "       [0.+0.j, 0.+0.j, 0.+0.j, 0.+2.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j],\n",
+       "       [0.+2.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j],\n",
+       "       [0.+0.j, 0.-2.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j]])"
+      ]
+     },
+     "execution_count": 19,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "SummedPauliOp(xyz).to_matrix()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Benchmark"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from numpy.random import default_rng\n",
+    "\n",
+    "rg = default_rng()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "paulis = [Pauli.from_label(''.join(rg.choice(['I','X','Y','Z'], size=50))) for _ in range(300)]\n",
+    "weights = [rg.uniform() for _ in range(300)]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "random_sp = SparsePauliOp.from_list(zip([pauli.to_label() for pauli in paulis], weights))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "random_summed = SummedPauliOp(random_sp)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "44.2 ms ± 365 µs per loop (mean ± std. dev. of 7 runs, 10 loops each)\n"
+     ]
+    }
+   ],
+   "source": [
+    "%%timeit\n",
+    "\n",
+    "random_summed @ random_summed"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Comparison to other classes,\n",
+    "\n",
+    "WeightedPauliOperator:\n",
+    "CPU times: user 6.94 s, sys: 56.2 ms, total: 7 s\n",
+    "Wall time: 7.04 s\n",
+    "\n",
+    "SummedOp([PauliOp]):\n",
+    "CPU times: user 2.96 s, sys: 30.1 ms, total: 2.99 s\n",
+    "Wall time: 3 s"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Expectations"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "two_qubit_H2 =  (-1.0523732 * I^I) + \\\n",
+    "                (0.39793742 * I^Z) + \\\n",
+    "                (-0.3979374 * Z^I) + \\\n",
+    "                (-0.0112801 * Z^Z) + \\\n",
+    "                (0.18093119 * X^X)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "SummedPauliOp([\n",
+      "-1.0523732 * II,\n",
+      "0.39793742 * IZ,\n",
+      "-0.3979374 * ZI,\n",
+      "-0.0112801 * ZZ,\n",
+      "0.18093119 * XX,\n",
+      "])\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(two_qubit_H2)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "SummedPauliOp(SparsePauliOp([[False, False, False, False],\n",
+       "               [False, False,  True, False],\n",
+       "               [False, False, False,  True],\n",
+       "               [False, False,  True,  True],\n",
+       "               [ True,  True, False, False]],\n",
+       "              coeffs=[-1.0523732 +0.j,  0.39793742+0.j, -0.3979374 +0.j, -0.0112801 +0.j,\n",
+       "  0.18093119+0.j]), coeff=1)"
+      ]
+     },
+     "execution_count": 27,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "two_qubit_H2"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from qiskit.aqua.operators import StateFn, PauliExpectation, CircuitSampler, CX, H, AerPauliExpectation\n",
+    "from qiskit import Aer"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "OperatorMeasurement(SummedPauliOp([\n",
+      "-1.0523732 * II,\n",
+      "0.39793742 * IZ,\n",
+      "-0.3979374 * ZI,\n",
+      "-0.0112801 * ZZ,\n",
+      "0.18093119 * XX,\n",
+      "]))\n"
+     ]
+    }
+   ],
+   "source": [
+    "h2_measurement = StateFn(two_qubit_H2).adjoint()\n",
+    "print(h2_measurement)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "SummedOp([\n",
+      "  ComposedOp([\n",
+      "    OperatorMeasurement(-1.0523732 * II),\n",
+      "    II\n",
+      "  ]),\n",
+      "  ComposedOp([\n",
+      "    OperatorMeasurement(0.39793742 * IZ),\n",
+      "    II\n",
+      "  ]),\n",
+      "  ComposedOp([\n",
+      "    OperatorMeasurement(-0.3979374 * ZI),\n",
+      "    II\n",
+      "  ]),\n",
+      "  ComposedOp([\n",
+      "    OperatorMeasurement(-0.0112801 * ZZ),\n",
+      "    II\n",
+      "  ]),\n",
+      "  ComposedOp([\n",
+      "    OperatorMeasurement(0.18093119 * ZZ),\n",
+      "         ┌───┐\n",
+      "    q_0: ┤ H ├\n",
+      "         ├───┤\n",
+      "    q_1: ┤ H ├\n",
+      "         └───┘\n",
+      "  ])\n",
+      "])\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(PauliExpectation(group_paulis=False).convert(h2_measurement))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 31,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "SummedOp([\n",
+      "  ComposedOp([\n",
+      "    OperatorMeasurement(AbelianSummedOp([\n",
+      "      -1.0523732 * II,\n",
+      "      0.18093119 * ZZ\n",
+      "    ])),\n",
+      "         ┌───┐\n",
+      "    q_0: ┤ H ├\n",
+      "         ├───┤\n",
+      "    q_1: ┤ H ├\n",
+      "         └───┘\n",
+      "  ]),\n",
+      "  ComposedOp([\n",
+      "    OperatorMeasurement(AbelianSummedOp([\n",
+      "      0.39793742 * IZ,\n",
+      "      -0.3979374 * ZI,\n",
+      "      -0.0112801 * ZZ\n",
+      "    ])),\n",
+      "    II\n",
+      "  ])\n",
+      "])\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(PauliExpectation().convert(h2_measurement))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 32,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "SummedOp([\n",
+      "  ComposedOp([\n",
+      "    OperatorMeasurement(AbelianSummedOp([\n",
+      "      -1.0523732 * II,\n",
+      "      0.18093119 * ZZ\n",
+      "    ])),\n",
+      "         ┌───┐\n",
+      "    q_0: ┤ H ├\n",
+      "         ├───┤\n",
+      "    q_1: ┤ H ├\n",
+      "         └───┘\n",
+      "  ]),\n",
+      "  ComposedOp([\n",
+      "    OperatorMeasurement(AbelianSummedOp([\n",
+      "      0.39793742 * IZ,\n",
+      "      -0.3979374 * ZI,\n",
+      "      -0.0112801 * ZZ\n",
+      "    ])),\n",
+      "    II\n",
+      "  ])\n",
+      "])\n"
+     ]
+    }
+   ],
+   "source": [
+    "h2_pauli = PauliExpectation().convert(h2_measurement)\n",
+    "print(h2_pauli)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 33,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "CircuitStateFn(\n",
+      "     ┌───┐     \n",
+      "q_0: ┤ H ├──■──\n",
+      "     └───┘┌─┴─┐\n",
+      "q_1: ─────┤ X ├\n",
+      "          └───┘\n",
+      ")\n"
+     ]
+    }
+   ],
+   "source": [
+    "bell = CX @ (I ^ H) @ Zero\n",
+    "print(bell)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Trotter"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 34,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from qiskit.circuit import Parameter\n",
+    "from qiskit.aqua.operators import PauliTrotterEvolution, Suzuki"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 35,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "e^(-i*SummedPauliOp([\n",
+      "-1.0523732 * II,\n",
+      "0.39793742 * IZ,\n",
+      "-0.3979374 * ZI,\n",
+      "-0.0112801 * ZZ,\n",
+      "0.18093119 * XX,\n",
+      "]) * θ)\n",
+      "EvolvedOp(SummedPauliOp(SparsePauliOp([[False, False, False, False],\n",
+      "               [False, False,  True, False],\n",
+      "               [False, False, False,  True],\n",
+      "               [False, False,  True,  True],\n",
+      "               [ True,  True, False, False]],\n",
+      "              coeffs=[-1.0523732 +0.j,  0.39793742+0.j, -0.3979374 +0.j, -0.0112801 +0.j,\n",
+      "  0.18093119+0.j]), coeff=θ), coeff=1.0)\n"
+     ]
+    }
+   ],
+   "source": [
+    "evo_time = Parameter('θ')\n",
+    "evolution_op = (evo_time*two_qubit_H2).exp_i()\n",
+    "print(evolution_op) # Note, EvolvedOps print as exponentiations\n",
+    "print(repr(evolution_op))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 36,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "ComposedOp([\n",
+      "  OperatorMeasurement(SummedPauliOp([\n",
+      "  -1.0523732 * II,\n",
+      "  0.39793742 * IZ,\n",
+      "  -0.3979374 * ZI,\n",
+      "  -0.0112801 * ZZ,\n",
+      "  0.18093119 * XX,\n",
+      "  ])),\n",
+      "  e^(-i*SummedPauliOp([\n",
+      "  -1.0523732 * II,\n",
+      "  0.39793742 * IZ,\n",
+      "  -0.3979374 * ZI,\n",
+      "  -0.0112801 * ZZ,\n",
+      "  0.18093119 * XX,\n",
+      "  ]) * θ),\n",
+      "  CircuitStateFn(\n",
+      "       ┌───┐     \n",
+      "  q_0: ┤ H ├──■──\n",
+      "       └───┘┌─┴─┐\n",
+      "  q_1: ─────┤ X ├\n",
+      "            └───┘\n",
+      "  )\n",
+      "])\n"
+     ]
+    }
+   ],
+   "source": [
+    "evo_and_meas = h2_measurement @ evolution_op @ bell\n",
+    "print(evo_and_meas)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 37,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "ComposedOp([\n",
+      "  OperatorMeasurement(SummedPauliOp([\n",
+      "  -1.0523732 * II,\n",
+      "  0.39793742 * IZ,\n",
+      "  -0.3979374 * ZI,\n",
+      "  -0.0112801 * ZZ,\n",
+      "  0.18093119 * XX,\n",
+      "  ])),\n",
+      "  CircuitStateFn(\n",
+      "  global phase: 1.0524\n",
+      "       ┌───┐     ┌───┐┌───┐┌──────────────────┐┌───┐┌───┐┌───┐»\n",
+      "  q_0: ┤ H ├──■──┤ H ├┤ X ├┤ RZ(0.18093119*θ) ├┤ X ├┤ H ├┤ X ├»\n",
+      "       └───┘┌─┴─┐├───┤└─┬─┘└──────────────────┘└─┬─┘├───┤└─┬─┘»\n",
+      "  q_1: ─────┤ X ├┤ H ├──■────────────────────────■──┤ H ├──■──»\n",
+      "            └───┘└───┘                              └───┘     »\n",
+      "  «     ┌──────────────────┐┌───┐┌──────────────────┐┌──────────────────┐┌───┐»\n",
+      "  «q_0: ┤ RZ(-0.0112801*θ) ├┤ X ├┤ RZ(0.39793742*θ) ├┤ RZ(0.39793742*θ) ├┤ X ├»\n",
+      "  «     └──────────────────┘└─┬─┘├──────────────────┤├──────────────────┤└─┬─┘»\n",
+      "  «q_1: ──────────────────────■──┤ RZ(-0.3979374*θ) ├┤ RZ(-0.3979374*θ) ├──■──»\n",
+      "  «                              └──────────────────┘└──────────────────┘     »\n",
+      "  «     ┌──────────────────┐┌───┐┌───┐┌───┐┌──────────────────┐┌───┐┌───┐\n",
+      "  «q_0: ┤ RZ(-0.0112801*θ) ├┤ X ├┤ H ├┤ X ├┤ RZ(0.18093119*θ) ├┤ X ├┤ H ├\n",
+      "  «     └──────────────────┘└─┬─┘├───┤└─┬─┘└──────────────────┘└─┬─┘├───┤\n",
+      "  «q_1: ──────────────────────■──┤ H ├──■────────────────────────■──┤ H ├\n",
+      "  «                              └───┘                              └───┘\n",
+      "  )\n",
+      "])\n"
+     ]
+    }
+   ],
+   "source": [
+    "trotterized_op = PauliTrotterEvolution(trotter_mode=Suzuki(order=2, reps=1)).convert(evo_and_meas)\n",
+    "# We can also set trotter_mode='suzuki' or leave it empty to default to first order Trotterization.\n",
+    "print(trotterized_op)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 38,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "bound = trotterized_op.bind_parameters({evo_time: .5})"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 39,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<pre style=\"word-wrap: normal;white-space: pre;background: #fff0;line-height: 1.1;font-family: &quot;Courier New&quot;,Courier,monospace\">global phase: 1.0524\n",
+       "     ┌───┐     ┌───┐┌───┐┌────────────────────────┐┌───┐┌───┐┌───┐»\n",
+       "q_0: ┤ H ├──■──┤ H ├┤ X ├┤ RZ(0.0904655950000000) ├┤ X ├┤ H ├┤ X ├»\n",
+       "     └───┘┌─┴─┐├───┤└─┬─┘└────────────────────────┘└─┬─┘├───┤└─┬─┘»\n",
+       "q_1: ─────┤ X ├┤ H ├──■──────────────────────────────■──┤ H ├──■──»\n",
+       "          └───┘└───┘                                    └───┘     »\n",
+       "«     ┌──────────────────────────┐┌───┐┌───────────────────────┐ »\n",
+       "«q_0: ┤ RZ(-0.00564005000000000) ├┤ X ├┤ RZ(0.198968710000000) ├─»\n",
+       "«     └──────────────────────────┘└─┬─┘├───────────────────────┴┐»\n",
+       "«q_1: ──────────────────────────────■──┤ RZ(-0.198968700000000) ├»\n",
+       "«                                      └────────────────────────┘»\n",
+       "«     ┌───────────────────────┐ ┌───┐┌──────────────────────────┐┌───┐┌───┐»\n",
+       "«q_0: ┤ RZ(0.198968710000000) ├─┤ X ├┤ RZ(-0.00564005000000000) ├┤ X ├┤ H ├»\n",
+       "«     ├───────────────────────┴┐└─┬─┘└──────────────────────────┘└─┬─┘├───┤»\n",
+       "«q_1: ┤ RZ(-0.198968700000000) ├──■────────────────────────────────■──┤ H ├»\n",
+       "«     └────────────────────────┘                                      └───┘»\n",
+       "«     ┌───┐┌────────────────────────┐┌───┐┌───┐\n",
+       "«q_0: ┤ X ├┤ RZ(0.0904655950000000) ├┤ X ├┤ H ├\n",
+       "«     └─┬─┘└────────────────────────┘└─┬─┘├───┤\n",
+       "«q_1: ──■──────────────────────────────■──┤ H ├\n",
+       "«                                         └───┘</pre>"
+      ],
+      "text/plain": [
+       "global phase: 1.0524\n",
+       "     ┌───┐     ┌───┐┌───┐┌────────────────────────┐┌───┐┌───┐┌───┐»\n",
+       "q_0: ┤ H ├──■──┤ H ├┤ X ├┤ RZ(0.0904655950000000) ├┤ X ├┤ H ├┤ X ├»\n",
+       "     └───┘┌─┴─┐├───┤└─┬─┘└────────────────────────┘└─┬─┘├───┤└─┬─┘»\n",
+       "q_1: ─────┤ X ├┤ H ├──■──────────────────────────────■──┤ H ├──■──»\n",
+       "          └───┘└───┘                                    └───┘     »\n",
+       "«     ┌──────────────────────────┐┌───┐┌───────────────────────┐ »\n",
+       "«q_0: ┤ RZ(-0.00564005000000000) ├┤ X ├┤ RZ(0.198968710000000) ├─»\n",
+       "«     └──────────────────────────┘└─┬─┘├───────────────────────┴┐»\n",
+       "«q_1: ──────────────────────────────■──┤ RZ(-0.198968700000000) ├»\n",
+       "«                                      └────────────────────────┘»\n",
+       "«     ┌───────────────────────┐ ┌───┐┌──────────────────────────┐┌───┐┌───┐»\n",
+       "«q_0: ┤ RZ(0.198968710000000) ├─┤ X ├┤ RZ(-0.00564005000000000) ├┤ X ├┤ H ├»\n",
+       "«     ├───────────────────────┴┐└─┬─┘└──────────────────────────┘└─┬─┘├───┤»\n",
+       "«q_1: ┤ RZ(-0.198968700000000) ├──■────────────────────────────────■──┤ H ├»\n",
+       "«     └────────────────────────┘                                      └───┘»\n",
+       "«     ┌───┐┌────────────────────────┐┌───┐┌───┐\n",
+       "«q_0: ┤ X ├┤ RZ(0.0904655950000000) ├┤ X ├┤ H ├\n",
+       "«     └─┬─┘└────────────────────────┘└─┬─┘├───┤\n",
+       "«q_1: ──■──────────────────────────────■──┤ H ├\n",
+       "«                                         └───┘"
+      ]
+     },
+     "execution_count": 39,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "bound[1].to_circuit().draw()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 40,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "SummedOp([\n",
+      "  ComposedOp([\n",
+      "    OperatorMeasurement(AbelianSummedOp([\n",
+      "      -1.0523732 * II,\n",
+      "      0.18093119 * ZZ\n",
+      "    ])),\n",
+      "    CircuitStateFn(\n",
+      "    global phase: 1.0524\n",
+      "         ┌───┐     ┌───┐┌───┐┌──────────────────┐┌───┐┌───┐┌───┐»\n",
+      "    q_0: ┤ H ├──■──┤ H ├┤ X ├┤ RZ(0.18093119*θ) ├┤ X ├┤ H ├┤ X ├»\n",
+      "         └───┘┌─┴─┐├───┤└─┬─┘└──────────────────┘└─┬─┘├───┤└─┬─┘»\n",
+      "    q_1: ─────┤ X ├┤ H ├──■────────────────────────■──┤ H ├──■──»\n",
+      "              └───┘└───┘                              └───┘     »\n",
+      "    «     ┌──────────────────┐┌───┐┌──────────────────┐┌──────────────────┐┌───┐»\n",
+      "    «q_0: ┤ RZ(-0.0112801*θ) ├┤ X ├┤ RZ(0.39793742*θ) ├┤ RZ(0.39793742*θ) ├┤ X ├»\n",
+      "    «     └──────────────────┘└─┬─┘├──────────────────┤├──────────────────┤└─┬─┘»\n",
+      "    «q_1: ──────────────────────■──┤ RZ(-0.3979374*θ) ├┤ RZ(-0.3979374*θ) ├──■──»\n",
+      "    «                              └──────────────────┘└──────────────────┘     »\n",
+      "    «     ┌──────────────────┐┌───┐┌───┐┌───┐┌──────────────────┐┌───┐┌───┐┌───┐\n",
+      "    «q_0: ┤ RZ(-0.0112801*θ) ├┤ X ├┤ H ├┤ X ├┤ RZ(0.18093119*θ) ├┤ X ├┤ H ├┤ H ├\n",
+      "    «     └──────────────────┘└─┬─┘├───┤└─┬─┘└──────────────────┘└─┬─┘├───┤├───┤\n",
+      "    «q_1: ──────────────────────■──┤ H ├──■────────────────────────■──┤ H ├┤ H ├\n",
+      "    «                              └───┘                              └───┘└───┘\n",
+      "    )\n",
+      "  ]),\n",
+      "  ComposedOp([\n",
+      "    OperatorMeasurement(AbelianSummedOp([\n",
+      "      0.39793742 * IZ,\n",
+      "      -0.3979374 * ZI,\n",
+      "      -0.0112801 * ZZ\n",
+      "    ])),\n",
+      "    CircuitStateFn(\n",
+      "    global phase: 1.0524\n",
+      "         ┌───┐     ┌───┐┌───┐┌──────────────────┐┌───┐┌───┐┌───┐»\n",
+      "    q_0: ┤ H ├──■──┤ H ├┤ X ├┤ RZ(0.18093119*θ) ├┤ X ├┤ H ├┤ X ├»\n",
+      "         └───┘┌─┴─┐├───┤└─┬─┘└──────────────────┘└─┬─┘├───┤└─┬─┘»\n",
+      "    q_1: ─────┤ X ├┤ H ├──■────────────────────────■──┤ H ├──■──»\n",
+      "              └───┘└───┘                              └───┘     »\n",
+      "    «     ┌──────────────────┐┌───┐┌──────────────────┐┌──────────────────┐┌───┐»\n",
+      "    «q_0: ┤ RZ(-0.0112801*θ) ├┤ X ├┤ RZ(0.39793742*θ) ├┤ RZ(0.39793742*θ) ├┤ X ├»\n",
+      "    «     └──────────────────┘└─┬─┘├──────────────────┤├──────────────────┤└─┬─┘»\n",
+      "    «q_1: ──────────────────────■──┤ RZ(-0.3979374*θ) ├┤ RZ(-0.3979374*θ) ├──■──»\n",
+      "    «                              └──────────────────┘└──────────────────┘     »\n",
+      "    «     ┌──────────────────┐┌───┐┌───┐┌───┐┌──────────────────┐┌───┐┌───┐\n",
+      "    «q_0: ┤ RZ(-0.0112801*θ) ├┤ X ├┤ H ├┤ X ├┤ RZ(0.18093119*θ) ├┤ X ├┤ H ├\n",
+      "    «     └──────────────────┘└─┬─┘├───┤└─┬─┘└──────────────────┘└─┬─┘├───┤\n",
+      "    «q_1: ──────────────────────■──┤ H ├──■────────────────────────■──┤ H ├\n",
+      "    «                              └───┘                              └───┘\n",
+      "    )\n",
+      "  ])\n",
+      "])\n"
+     ]
+    }
+   ],
+   "source": [
+    "diagonalized_meas_op = PauliExpectation().convert(trotterized_op)\n",
+    "print(diagonalized_meas_op)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 41,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "evo_time_points = list(range(8))\n",
+    "h2_trotter_expectations = diagonalized_meas_op.bind_parameters({evo_time: evo_time_points})"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 42,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([-0.88272211-1.111e-15j, -0.88272211-1.165e-15j,\n",
+       "       -0.88272211-1.135e-15j, -0.88272211-1.178e-15j,\n",
+       "       -0.88272211-1.115e-15j, -0.88272211-8.360e-16j,\n",
+       "       -0.88272211-1.087e-15j, -0.88272211-1.161e-15j])"
+      ]
+     },
+     "execution_count": 42,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "h2_trotter_expectations.eval()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 43,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Sampled Trotterized energies:\n",
+      " [-0.88272211 -0.88272211 -0.88272211 -0.88272211 -0.88272211 -0.88272211\n",
+      " -0.88272211 -0.88272211]\n"
+     ]
+    }
+   ],
+   "source": [
+    "sampler = CircuitSampler(backend=Aer.get_backend('qasm_simulator'))\n",
+    "# sampler.quantum_instance.run_config.shots = 1000\n",
+    "sampled_trotter_exp_op = sampler.convert(h2_trotter_expectations)\n",
+    "sampled_trotter_energies = sampled_trotter_exp_op.eval()\n",
+    "print('Sampled Trotterized energies:\\n {}'.format(np.real(sampled_trotter_energies)))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 44,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Before:\n",
+      "\n",
+      "ComposedOp([\n",
+      "  OperatorMeasurement(AbelianSummedOp([\n",
+      "    -1.0523732 * II,\n",
+      "    0.18093119 * ZZ\n",
+      "  ])),\n",
+      "  CircuitStateFn(\n",
+      "  global phase: 1.0524\n",
+      "       ┌───┐     ┌───┐┌───┐┌───────┐┌───┐┌───┐┌───┐┌───────┐┌───┐┌───────┐»\n",
+      "  q_0: ┤ H ├──■──┤ H ├┤ X ├┤ RZ(0) ├┤ X ├┤ H ├┤ X ├┤ RZ(0) ├┤ X ├┤ RZ(0) ├»\n",
+      "       └───┘┌─┴─┐├───┤└─┬─┘└───────┘└─┬─┘├───┤└─┬─┘└───────┘└─┬─┘├───────┤»\n",
+      "  q_1: ─────┤ X ├┤ H ├──■─────────────■──┤ H ├──■─────────────■──┤ RZ(0) ├»\n",
+      "            └───┘└───┘                   └───┘                   └───────┘»\n",
+      "  «     ┌───────┐┌───┐┌───────┐┌───┐┌───┐┌───┐┌───────┐┌───┐┌───┐┌───┐\n",
+      "  «q_0: ┤ RZ(0) ├┤ X ├┤ RZ(0) ├┤ X ├┤ H ├┤ X ├┤ RZ(0) ├┤ X ├┤ H ├┤ H ├\n",
+      "  «     ├───────┤└─┬─┘└───────┘└─┬─┘├───┤└─┬─┘└───────┘└─┬─┘├───┤├───┤\n",
+      "  «q_1: ┤ RZ(0) ├──■─────────────■──┤ H ├──■─────────────■──┤ H ├┤ H ├\n",
+      "  «     └───────┘                   └───┘                   └───┘└───┘\n",
+      "  )\n",
+      "])\n",
+      "\n",
+      "After:\n",
+      "\n",
+      "ComposedOp([\n",
+      "  OperatorMeasurement(AbelianSummedOp([\n",
+      "    -1.0523732 * II,\n",
+      "    0.18093119 * ZZ\n",
+      "  ])),\n",
+      "  DictStateFn({'00': 0.7036456405748563, '11': 0.7105510625563796})\n",
+      "])\n"
+     ]
+    }
+   ],
+   "source": [
+    "print('Before:\\n')\n",
+    "print(h2_trotter_expectations.reduce()[0][0])\n",
+    "print('\\nAfter:\\n')\n",
+    "print(sampled_trotter_exp_op[0][0])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Benchmark of Sampler"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 45,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Sampled energies:\n",
+      " -0.8827221099609374\n"
+     ]
+    }
+   ],
+   "source": [
+    "sampler = CircuitSampler(backend=Aer.get_backend('qasm_simulator'))\n",
+    "\n",
+    "sampled_exp_op = sampler.convert(h2_pauli @ bell)\n",
+    "sampled_energies = sampled_exp_op.eval()\n",
+    "print(f'Sampled energies:\\n {sampled_energies.real}')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 46,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#%%timeit \n",
+    "#AerPauliExpectation().convert(h2_measurement)\n",
+    "\n",
+    "sampler = CircuitSampler(backend=Aer.get_backend('statevector_simulator'))\n",
+    "\n",
+    "sampled_exp_op = sampler.convert(h2_measurement @ bell)\n",
+    "sampled_energies2 = sampled_exp_op.eval()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 47,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Sampled energies:\n",
+      " -0.88272211\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(f'Sampled energies:\\n {sampled_energies2.real}')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.8.6"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}
