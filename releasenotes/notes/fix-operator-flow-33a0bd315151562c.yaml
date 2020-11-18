@@ -15,3 +15,4 @@ fixes:
     :meth:`~qiskit.aqua.operators.legacy.WeightedPauliOperator.to_opflow()`
     returns a correct operator when coefficients are complex numbers.
     `#1381 <https://github.com/Qiskit/qiskit-aqua/issues/1381>` for more details.
+    Don't merge this PR. This is CI test.
