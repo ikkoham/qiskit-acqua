@@ -24,6 +24,7 @@ from qiskit.tools.events import TextProgressBar
 from qiskit.aqua import aqua_globals
 from qiskit.aqua.algorithms import AlgorithmResult
 from qiskit.aqua.operators import Z2Symmetries, commutator, WeightedPauliOperator
+from qiskit.aqua.operators.utils import commutator
 from qiskit.chemistry import FermionicOperator, BosonicOperator
 from qiskit.chemistry.drivers import BaseDriver
 from qiskit.chemistry.results import (ElectronicStructureResult, VibronicStructureResult,
@@ -258,7 +259,12 @@ class QEOM(ExcitedStatesSolver):
             The indices of the matrix element and the corresponding qubit
             operator for each of the EOM matrices
         """
+        # Workaround before Z2 symmetry using opflow
         m_u, n_u, left_op, right_op_1, right_op_2 = params
+        operator = operator.to_opflow()
+        left_op = left_op.to_opflow()
+        right_op_1 = right_op_1.to_opflow()
+        right_op_2 = right_op_2.to_opflow()
         if left_op is None:
             q_mat_op = None
             w_mat_op = None
@@ -274,8 +280,8 @@ class QEOM(ExcitedStatesSolver):
                 if right_op_1 is not None:
                     q_mat_op = commutator(left_op, operator, right_op_1, sign=sign)
                     w_mat_op = commutator(left_op, right_op_1, sign=sign)
-                    q_mat_op = None if q_mat_op.is_empty() else q_mat_op
-                    w_mat_op = None if w_mat_op.is_empty() else w_mat_op
+                    q_mat_op = None if not q_mat_op else q_mat_op
+                    w_mat_op = None if not w_mat_op else w_mat_op
                 else:
                     q_mat_op = None
                     w_mat_op = None
@@ -283,8 +289,8 @@ class QEOM(ExcitedStatesSolver):
                 if right_op_2 is not None:
                     m_mat_op = commutator(left_op, operator, right_op_2, sign=sign)
                     v_mat_op = commutator(left_op, right_op_2, sign=sign)
-                    m_mat_op = None if m_mat_op.is_empty() else m_mat_op
-                    v_mat_op = None if v_mat_op.is_empty() else v_mat_op
+                    m_mat_op = None if not m_mat_op else m_mat_op
+                    v_mat_op = None if not v_mat_op else v_mat_op
                 else:
                     m_mat_op = None
                     v_mat_op = None

@@ -205,6 +205,26 @@ class OperatorStateFn(StateFn):
             return front.combo_fn([self.eval(front.coeff * front_elem)  # type: ignore
                                    for front_elem in front.oplist])  # type: ignore
 
+        #from ..primitive_ops.pauli_sum_op import PauliSumOp
+        #if isinstance(self.primitive, PauliSumOp) and isinstance(front, VectorStateFn):
+        #    try:
+        #        from qiskit.providers.aer.extensions import SnapshotExpectationValue
+        #    except ImportError:
+        #        pass  # TODO: logging
+        #    else:
+        #        from qiskit import QuantumCircuit, execute, Aer
+        #        circuit = QuantumCircuit(self.num_qubits)
+        #        circuit.initialize(front.primitive.data, range(front.num_qubits))
+        #        oplist = self.primitive.primitive.to_list()  # type: ignore
+        #        oplist = [(o[1], o[0]) for o in oplist]
+        #        snap_exp = SnapshotExpectationValue(label="opsfn", op=oplist)
+        #        circuit.append(snap_exp, range(self.num_qubits))
+        #        result = execute(circuit, Aer.get_backend("qasm_simulator")).result()
+        #        return (
+        #            result.data()["snapshots"]["expectation_value"]["opsfn"][0]["value"]
+        #            * self.coeff
+        #        )
+
         return front.adjoint().eval(self.primitive.eval(front)) * self.coeff  # type: ignore
 
     def sample(self,
