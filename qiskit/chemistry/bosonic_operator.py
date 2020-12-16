@@ -101,8 +101,8 @@ class BosonicOperator:
 
         return pauli_list
 
-    def _extend(self, list1: List[Tuple[float, Pauli]], list2: List[Tuple[float, Pauli]]) \
-            -> List[Tuple[float, Pauli]]:
+    def _extend(self, list1: List[Tuple[Pauli, float]], list2: List[Tuple[Pauli, float]]) \
+            -> List[Tuple[Pauli, float]]:
         """ Concatenates the paulis for different modes together
 
         Args:
