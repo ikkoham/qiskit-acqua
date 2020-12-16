@@ -22,8 +22,8 @@ from typing import Tuple, List, Union, Any, Optional, Callable, Dict
 import numpy as np
 
 from qiskit.tools import parallel_map
-from qiskit.aqua import aqua_globals
-from qiskit.aqua.algorithms import EigensolverResult, MinimumEigensolverResult
+from qiskit.utils import aqua_globals
+from qiskit.algorithms import EigensolverResult, MinimumEigensolverResult
 from qiskit.opflow import PauliSumOp
 from qiskit.chemistry import QiskitChemistryError
 from qiskit.chemistry import WatsonHamiltonian

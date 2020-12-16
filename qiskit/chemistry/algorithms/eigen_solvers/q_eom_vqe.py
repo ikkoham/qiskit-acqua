@@ -19,12 +19,12 @@ import numpy as np
 from qiskit.circuit import QuantumCircuit
 from qiskit.providers import BaseBackend
 from qiskit.providers import Backend
-from qiskit.aqua import QuantumInstance
-from qiskit.aqua.algorithms import VQE
+from qiskit.utils import QuantumInstance
+from qiskit.algorithms import VQE
 from qiskit.opflow import OperatorBase, LegacyBaseOperator, Z2Symmetries
 from qiskit.aqua.components.optimizers import Optimizer
 from qiskit.aqua.components.variational_forms import VariationalForm
-from qiskit.aqua.utils.validation import validate_min, validate_in_set
+from qiskit.utils.validation import validate_min, validate_in_set
 from .q_equation_of_motion import QEquationOfMotion
 
 logger = logging.getLogger(__name__)

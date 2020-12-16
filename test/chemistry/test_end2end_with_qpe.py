@@ -20,7 +20,8 @@ import qiskit
 from qiskit.circuit.library import QFT
 from qiskit.aqua.utils import decimal_to_binary
 from qiskit.utils import QuantumInstance
-from qiskit.algorithms import QPE, NumPyMinimumEigensolver
+from qiskit.algorithms import NumPyMinimumEigensolver
+from qiskit.aqua.algorithms import QPE
 from qiskit.opflow import Z2Symmetries
 from qiskit.chemistry.drivers import PySCFDriver, UnitsType
 from qiskit.chemistry import FermionicOperator, QiskitChemistryError
