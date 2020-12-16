@@ -21,7 +21,8 @@ import numpy as np
 from qiskit import BasicAer
 from qiskit.circuit.library import TwoLocal
 from qiskit.utils import QuantumInstance
-from qiskit.algorithms import NumPyMinimumEigensolver, VQE, IQPE
+from qiskit.algorithms import NumPyMinimumEigensolver, VQE
+from qiskit.aqua.algorithms import IQPE
 from qiskit.algorithms.optimizers import SLSQP
 from qiskit.chemistry import QiskitChemistryError
 from qiskit.chemistry.applications import MolecularGroundStateEnergy

@@ -17,9 +17,9 @@ import unittest
 from test.chemistry import QiskitChemistryTestCase
 
 from qiskit import BasicAer
-from qiskit.aqua import QuantumInstance
+from qiskit.utils import QuantumInstance
 from qiskit.opflow import PauliSumOp
-from qiskit.aqua.components.optimizers import COBYLA
+from qiskit.algorithms.optimizers import COBYLA
 from qiskit.chemistry.transformations import (BosonicTransformation,
                                               BosonicTransformationType,
                                               BosonicQubitMappingType)

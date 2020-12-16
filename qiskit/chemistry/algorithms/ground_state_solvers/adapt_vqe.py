@@ -17,9 +17,9 @@ import logging
 from typing import Optional, List, Tuple, Union
 import numpy as np
 
-from qiskit.aqua.utils.validation import validate_min
+from qiskit.utils.validation import validate_min
 from qiskit.opflow import PauliSumOp
-from qiskit.aqua.algorithms import VQE
+from qiskit.algorithms import VQE
 from qiskit.aqua import AquaError
 from ...results.electronic_structure_result import ElectronicStructureResult
 from ...results.vibronic_structure_result import VibronicStructureResult

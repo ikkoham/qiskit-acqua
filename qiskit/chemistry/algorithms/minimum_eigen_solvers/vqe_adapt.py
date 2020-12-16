@@ -26,7 +26,7 @@ from qiskit import ClassicalRegister
 from qiskit.utils import QuantumInstance
 from qiskit.aqua import AquaError
 from qiskit.algorithms import VQAlgorithm, VQE, VQEResult
-from qiskit.algorithms.variational_forms import UCCSD
+from qiskit.chemistry.components.variational_forms import UCCSD
 from qiskit.opflow import WeightedPauliOperator, LegacyBaseOperator
 from qiskit.algorithms.optimizers import Optimizer
 from qiskit.algorithms.variational_forms import VariationalForm

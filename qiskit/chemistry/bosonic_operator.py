@@ -96,7 +96,7 @@ class BosonicOperator:
             for beta in range(2):
                 pauli_prod = Pauli.sgn_prod(a_i[alpha], a_j[beta])
                 coeff = h1_ij / 4 * pauli_prod[1] * np.power(-1j, alpha) * np.power(1j, beta)
-                pauli_term = (coeff, pauli_prod[0])
+                pauli_term = (pauli_prod[0], coeff)
                 pauli_list.append(pauli_term)
 
         return pauli_list
@@ -119,7 +119,7 @@ class BosonicOperator:
                 p2c = copy.deepcopy(pauli2[0])
                 p1c.insert_paulis(paulis=p2c)
                 coeff = pauli1[1]*pauli2[1]
-                final_list.append((coeff, p1c))
+                final_list.append((p1c, coeff))
 
         return final_list
 
